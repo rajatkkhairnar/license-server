@@ -9,12 +9,14 @@
     "db:push": "npx prisma db push",
     "db:studio": "npx prisma studio",
     "db:generate": "npx prisma generate",
-    "build:portal": "cd portal && npm run build",
+    "build:portal": "cd portal && npm install && npm run build",
     "postinstall": "npx prisma generate",
     "build": "npm run build:portal"
   },
   "dependencies": {
     "@emailjs/nodejs": "^5.0.2",
+    "@libsql/client": "^0.17.4",
+    "@prisma/adapter-libsql": "^7.9.1",
     "@prisma/client": "^6.9.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

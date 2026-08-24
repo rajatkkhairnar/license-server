@@ -7,11 +7,10 @@
  *   - deactivate: Revoke a machine activation (free up a slot)
  *   - generateKey: Create a new license (vendor-generated, from admin portal)
  */
-const { PrismaClient } = require('@prisma/client');
 const { signLicenseToken } = require('../utils/jwt');
 const { generateLicenseKey } = require('../utils/generateKey');
 
-const prisma = new PrismaClient();
+const prisma = require('../prisma');
 
 /**
  * Activate a license on a specific machine.

@@ -19,14 +19,12 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../prisma');
 
 const adminAuth = require('../middleware/adminAuth');
 const { adminLimiter } = require('../middleware/rateLimiter');
 const { signAdminToken } = require('../utils/jwt');
 const { generateNewLicense } = require('../services/licenseService');
-
-const prisma = new PrismaClient();
 
 // ─── Admin Login (no auth required) ─────────────────────────────────
 

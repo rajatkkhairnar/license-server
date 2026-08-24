@@ -11,12 +11,11 @@
  *   - IP tracking (stored on Customer for admin visibility)
  *   - Machine ID blocking (checked at activation time, not here)
  */
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const { generateOtp, sendOtpEmail } = require('../utils/email');
 const { generateLicenseKey } = require('../utils/generateKey');
+const prisma = require('../prisma');
 
-const prisma = new PrismaClient();
 const BCRYPT_ROUNDS = 12;
 const OTP_TTL_MINUTES = 10;
 const TRIAL_DAYS = 14;
