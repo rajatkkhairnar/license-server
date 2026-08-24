@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Customer — Lab owner who signed up for a trial or purchased a license.
+/// Created during the self-service sign-up flow (after email OTP verification).
+model Customer {
+  id            String    @id @default(cuid())
+  labName       String
+  ownerName     String
+  email         String    @unique
+  phone         String
+  password      String    // bcrypt hashed
+  emailVerified Boolean   @default(false)
+  numRoles      Int       @default(2)   // Number of local user accounts to seed (admin + staff)
+  signupIp      String?   // IP address at sign-up (for abuse detection)
+  createdAt     DateTime  @default(now())
+  licenses      License[]
+}
+
+/// OtpToken — Temporary email verification token used during sign-up.
+/// Each OTP is valid for 10 minutes. Marked as `used` after successful verification.
+model OtpToken {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String   // 6-digit code
+  payload   String?  // JSON-stringified registration data (stored temporarily)
+  expiresAt DateTime // now + 10 minutes
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+/// License — A license key issued to a customer (trial or paid).
+/// The same key persists from trial → paid (vendor extends expiresAt from portal).
+model License {
+  id              String       @id @default(cuid())
+  key             String       @unique   // Format: MLAB-XXXX-XXXX-XXXX
+  customerId      String?
+  customer        Customer?    @relation(fields: [customerId], references: [id])
+  plan            String       @default("offline") // "offline" | "hybrid" | "online"
+  status          String       @default("active")  // "active" | "suspended" | "expired"
+  isTrial         Boolean      @default(true)       // Trial vs paid (for abuse tracking)
+  maxActivations  Int          @default(1)
+  activationCount Int          @default(0)
+  numRoles        Int          @default(2)   // Roles to seed in the desktop app
+  customerName    String?      // Quick label (for vendor-generated keys without a Customer)
+  customerEmail   String?      // For vendor records (vendor-generated keys)
+  expiresAt       DateTime?
+  notes           String?      // Vendor internal notes
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  activations     Activation[]
+}
+
+/// Activation — Records each machine where a license has been activated.
+/// Machine binding uses hardware fingerprint from node-machine-id.
+model Activation {
+  id           String   @id @default(cuid())
+  licenseId    String
+  license      License  @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  machineId    String   // Hardware fingerprint from node-machine-id
+  machineLabel String?  // Human label, e.g. "Dr Mehta's PC"
+  activatedAt  DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  isRevoked    Boolean  @default(false)
+}

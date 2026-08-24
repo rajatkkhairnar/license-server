@@ -1,0 +1,9 @@
+{
+  "licenseKey": "MLAB-G2BR-UC8D-CJDU",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsaWNlbnNlS2V5IjoiTUxBQi1HMkJSLVVDOEQtQ0pEVSIsInBsYW4iOiJUZXN0IiwibWFjaGluZUlkIjoib2ZmbGluZS1hbnktbWFjaGluZSIsImV4cGlyZXNBdCI6IjIwMjYtMDgtMjhUMTU6MzM6NDAuMDIyWiIsIm51bVJvbGVzIjoyLCJpYXQiOjE3ODI3NDcyMjAsImV4cCI6MTc5MDUyMzIyMH0.rxPynjlow006DT9bBiJSG31pw_RaIr7nuZkydhwoBhA",
+  "plan": "Test",
+  "numRoles": 2,
+  "expiresAt": "2026-08-28T15:33:40.022Z",
+  "tokenExpiresAt": "2026-09-27T15:33:40.027Z",
+  "lastValidatedAt": "2026-06-29T15:33:40.022Z"
+}
