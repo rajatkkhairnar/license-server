@@ -52,8 +52,8 @@ app.use((req, res, next) => {
 // Public API (sign-up + license operations)
 app.use('/api', publicRoutes);
 
-// Admin portal API
-app.use('/admin', adminRoutes);
+// Admin portal API (moved under /api to prevent frontend routing conflicts)
+app.use('/api/admin', adminRoutes);
 
 // ─── Static Files (Portal SPA) ─────────────────────────────────────
 
@@ -62,10 +62,10 @@ const portalBuildPath = path.join(__dirname, 'portal', 'dist');
 app.use(express.static(portalBuildPath));
 
 // SPA fallback — serve index.html for any non-API route
-// This handles client-side routing for both /signup and /portal/*
+// This handles client-side routing for both /signup and /admin/*
 app.get('*', (req, res) => {
   // Don't serve index.html for API routes that don't exist
-  if (req.path.startsWith('/api') || req.path.startsWith('/admin')) {
+  if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'Not found' });
   }
   res.sendFile(path.join(portalBuildPath, 'index.html'));

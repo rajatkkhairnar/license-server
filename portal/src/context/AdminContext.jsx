@@ -8,7 +8,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const AdminContext = createContext(null);
 
-const API_BASE = '';
+const API_BASE = '/api';
 
 export const AdminProvider = ({ children }) => {
   const [token, setToken] = useState(() => sessionStorage.getItem('adminToken') || null);
