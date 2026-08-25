@@ -1,5 +1,4 @@
 const { PrismaClient } = require('@prisma/client');
-const { createClient } = require('@libsql/client');
 const { PrismaLibSQL } = require('@prisma/adapter-libsql');
 
 let prisma;
@@ -11,12 +10,11 @@ console.log(`🔌 Prisma init — TURSO_DATABASE_URL is ${tursoUrl ? 'SET (' + t
 console.log(`🔌 Prisma init — TURSO_AUTH_TOKEN is ${tursoToken ? 'SET (length: ' + tursoToken.length + ')' : 'NOT SET'}`);
 
 if (tursoUrl) {
-  const libsql = createClient({
+  const adapter = new PrismaLibSQL({
     url: tursoUrl,
     authToken: tursoToken,
   });
 
-  const adapter = new PrismaLibSQL(libsql);
   prisma = new PrismaClient({ adapter });
   console.log('✅ Prisma connected via Turso (LibSQL adapter)');
 } else {
