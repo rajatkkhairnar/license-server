@@ -1,24 +1,28 @@
 const { PrismaClient } = require('@prisma/client');
 const { createClient } = require('@libsql/client');
-const { PrismaLibSql } = require('@prisma/adapter-libsql');
+const { PrismaLibSQL } = require('@prisma/adapter-libsql');
 
 let prisma;
 
-if (!process.env.TURSO_DATABASE_URL) {
-  console.warn('TURSO_DATABASE_URL not found. Prisma will connect locally or fail if not configured correctly.');
-}
+const tursoUrl = process.env.TURSO_DATABASE_URL;
+const tursoToken = process.env.TURSO_AUTH_TOKEN;
 
-if (process.env.TURSO_DATABASE_URL) {
+console.log(`🔌 Prisma init — TURSO_DATABASE_URL is ${tursoUrl ? 'SET (' + tursoUrl.substring(0, 30) + '...)' : 'NOT SET'}`);
+console.log(`🔌 Prisma init — TURSO_AUTH_TOKEN is ${tursoToken ? 'SET (length: ' + tursoToken.length + ')' : 'NOT SET'}`);
+
+if (tursoUrl) {
   const libsql = createClient({
-    url: process.env.TURSO_DATABASE_URL,
-    authToken: process.env.TURSO_AUTH_TOKEN,
+    url: tursoUrl,
+    authToken: tursoToken,
   });
 
-  const adapter = new PrismaLibSql(libsql);
+  const adapter = new PrismaLibSQL(libsql);
   prisma = new PrismaClient({ adapter });
+  console.log('✅ Prisma connected via Turso (LibSQL adapter)');
 } else {
   // Fallback to local sqlite file if Turso is not configured (e.g. local dev)
   prisma = new PrismaClient();
+  console.log('⚠️ Prisma connected locally (no Turso URL found)');
 }
 
 module.exports = prisma;
