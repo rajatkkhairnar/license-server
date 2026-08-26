@@ -16,6 +16,7 @@ import {
   Loader2,
   RefreshCw,
   Monitor,
+  UploadCloud,
 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 
@@ -24,6 +25,38 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState('');
+
+  const handleSoftwareUpload = async (e) => {
+    e.preventDefault();
+    const file = e.target.softwareFile.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    setUploadMessage('');
+
+    const formData = new FormData();
+    formData.append('softwareFile', file);
+
+    try {
+      const res = await apiFetch('/admin/software/upload', {
+        method: 'POST',
+        // Note: Do not set Content-Type header when sending FormData,
+        // fetch will automatically set it with the correct boundary.
+        headers: {}, 
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      setUploadMessage('Software uploaded successfully!');
+      e.target.reset();
+    } catch (err) {
+      setUploadMessage(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const loadStats = async () => {
     setLoading(true);
@@ -163,6 +196,49 @@ const AdminDashboard = () => {
             <p className="admin-empty">No activations yet</p>
           )}
         </div>
+      </div>
+
+      {/* Software Upload Section */}
+      <div className="admin-card" style={{ marginTop: '24px' }}>
+        <h3 className="admin-card-title">
+          <UploadCloud size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px' }} />
+          Software Updates
+        </h3>
+        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          Upload new versions of MicroLab Pro. Users will download the latest version from their trial confirmation page. The system keeps the 3 most recent uploads.
+        </p>
+        
+        <form onSubmit={handleSoftwareUpload} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <input 
+            type="file" 
+            name="softwareFile" 
+            required 
+            style={{ 
+              padding: '8px', 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '6px',
+              flex: 1,
+              background: 'var(--card-bg)'
+            }} 
+          />
+          <button 
+            type="submit" 
+            className="btn-primary" 
+            disabled={uploading}
+            style={{ minWidth: '120px' }}
+          >
+            {uploading ? <Loader2 size={16} className="spin" /> : 'Upload'}
+          </button>
+        </form>
+        {uploadMessage && (
+          <p style={{ 
+            marginTop: '12px', 
+            fontSize: '14px', 
+            color: uploadMessage.includes('successfully') ? '#10b981' : '#ef4444' 
+          }}>
+            {uploadMessage}
+          </p>
+        )}
       </div>
     </div>
   );

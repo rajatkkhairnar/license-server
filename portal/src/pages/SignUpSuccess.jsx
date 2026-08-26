@@ -163,9 +163,7 @@ const SignUpSuccess = () => {
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
             <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/api/software/download"
               className="btn-primary"
               style={{ textDecoration: 'none', flex: 1 }}
             >
