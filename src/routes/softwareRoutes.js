@@ -14,10 +14,20 @@ const fs = require('fs');
 const adminAuth = require('../middleware/adminAuth');
 const { adminLimiter } = require('../middleware/rateLimiter');
 
-// Ensure uploads/software directory exists
-const uploadDir = path.join(process.cwd(), 'uploads', 'software');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Determine upload directory based on environment.
+// Vercel's /var/task is read-only; use /tmp there (ephemeral but writable).
+// On Railway / VPS / local, use a persistent uploads/ directory.
+const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+const uploadDir = isServerless
+  ? path.join('/tmp', 'uploads', 'software')
+  : path.join(process.cwd(), 'uploads', 'software');
+
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (err) {
+  console.error('Failed to create upload directory:', err.message);
 }
 
 // Multer storage configuration
