@@ -43,13 +43,17 @@ export const AdminProvider = ({ children }) => {
 
   /** Authenticated fetch wrapper */
   const apiFetch = useCallback(async (path, options = {}) => {
+    // Don't set Content-Type for FormData — the browser sets it with the boundary
+    const isFormData = options.body instanceof FormData;
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(options.headers || {}),
+    };
+
     const res = await fetch(`${API_BASE}${path}`, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {}),
-      },
+      headers,
     });
     if (res.status === 401) {
       logout();

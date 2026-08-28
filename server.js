@@ -53,8 +53,10 @@ app.use((req, res, next) => {
 // Public API (sign-up + license operations)
 app.use('/api', publicRoutes);
 
-// Software API (upload/download)
+// Software API — public routes (download, info) are at /api/software/*
+// Admin routes (upload, versions) are at /api/admin/software/*
 app.use('/api', softwareRoutes);
+app.use('/api/admin/software', softwareRoutes);
 
 // Admin portal API (moved under /api to prevent frontend routing conflicts)
 app.use('/api/admin', adminRoutes);

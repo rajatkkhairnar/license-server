@@ -14,6 +14,7 @@
     "build": "npm run build:portal"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1118.0",
     "@emailjs/nodejs": "^5.0.2",
     "@libsql/client": "^0.17.4",
     "@prisma/adapter-libsql": "^6.19.3",

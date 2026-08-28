@@ -42,9 +42,6 @@ const AdminDashboard = () => {
     try {
       const res = await apiFetch('/admin/software/upload', {
         method: 'POST',
-        // Note: Do not set Content-Type header when sending FormData,
-        // fetch will automatically set it with the correct boundary.
-        headers: {}, 
         body: formData,
       });
       const data = await res.json();

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AdminProvider } from './context/AdminContext';
 
 // Public pages
+import LandingPage from './pages/LandingPage';
 import SignUp from './pages/SignUp';
 import SignUpSuccess from './pages/SignUpSuccess';
 
@@ -38,8 +39,8 @@ function App() {
       />
 
       {/* Default redirects */}
-      <Route path="/" element={<Navigate to="/signup" replace />} />
-      <Route path="*" element={<Navigate to="/signup" replace />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
