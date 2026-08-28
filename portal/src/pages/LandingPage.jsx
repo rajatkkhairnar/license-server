@@ -18,7 +18,7 @@ const Navbar = () => {
         <a href="#pricing" className="landing-nav-link">Pricing</a>
       </div>
       <div className="landing-nav-right">
-        <a href="https://license-server-orcin-seven.vercel.app/" className="landing-nav-btn">Start Free Trial</a>
+        <a href="https://license-server-orcin-seven.vercel.app/signup" className="landing-nav-btn">Start Free Trial</a>
       </div>
     </nav>
   );
@@ -106,7 +106,7 @@ const LandingPage = () => {
           animate={{ opacity: 1, y: 0 }} 
           transition={{ delay: 0.6, duration: 0.5 }}
         >
-          <a href="https://license-server-orcin-seven.vercel.app/" className="hero-primary-btn">
+          <a href="https://license-server-orcin-seven.vercel.app/signup" className="hero-primary-btn">
             <span className="hero-primary-btn-text">Start Free Trial</span>
             <div className="hero-primary-btn-arrow">
               <ArrowRight size={18} />
