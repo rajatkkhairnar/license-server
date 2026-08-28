@@ -21,37 +21,85 @@ import {
 import { useAdmin } from '../context/AdminContext';
 
 const AdminDashboard = () => {
-  const { apiFetch } = useAdmin();
+  const { apiFetch, token } = useAdmin();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
 
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   const handleSoftwareUpload = async (e) => {
     e.preventDefault();
-    const file = e.target.softwareFile.files[0];
+    const form = e.target;
+    const file = form.softwareFile.files[0];
     if (!file) return;
 
     setUploading(true);
-    setUploadMessage('');
-
-    const formData = new FormData();
-    formData.append('softwareFile', file);
+    setUploadMessage('Requesting secure upload link...');
+    setUploadProgress(0);
 
     try {
-      const res = await apiFetch('/admin/software/upload', {
+      // 1. Get Presigned URL
+      const presignRes = await apiFetch('/admin/software/presign', {
         method: 'POST',
-        body: formData,
+        body: JSON.stringify({ fileName: file.name, fileSize: file.size })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-      setUploadMessage('Software uploaded successfully!');
-      e.target.reset();
+      const presignData = await presignRes.json();
+      if (!presignRes.ok) throw new Error(presignData.error || 'Failed to get upload link');
+      
+      const { presignedUrl } = presignData;
+      setUploadMessage('Uploading directly to storage...');
+
+      // 2. Upload directly to Cloudflare R2
+      const xhr = new XMLHttpRequest();
+      
+      xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(percentComplete);
+        }
+      });
+
+      xhr.addEventListener("load", async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          setUploadMessage('Finalizing upload...');
+          
+          // 3. Notify backend of completion to cleanup old files
+          try {
+            await apiFetch('/admin/software/upload-complete', { method: 'POST' });
+            setUploading(false);
+            setUploadMessage('Software uploaded successfully!');
+            form.reset();
+            setTimeout(() => setUploadProgress(0), 2000);
+          } catch (finalizeErr) {
+            setUploading(false);
+            setUploadMessage('Uploaded, but failed to finalize cleanup.');
+          }
+        } else {
+          setUploading(false);
+          setUploadMessage('Upload to storage failed.');
+        }
+      });
+
+      xhr.addEventListener("error", () => {
+        setUploading(false);
+        setUploadMessage('Upload failed due to network error.');
+      });
+      
+      xhr.addEventListener("abort", () => {
+        setUploading(false);
+        setUploadMessage('Upload cancelled.');
+      });
+
+      xhr.open("PUT", presignedUrl);
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");
+      xhr.send(file); // Send the raw file directly
+
     } catch (err) {
-      setUploadMessage(err.message);
-    } finally {
       setUploading(false);
+      setUploadMessage(err.message);
     }
   };
 
@@ -227,6 +275,23 @@ const AdminDashboard = () => {
             {uploading ? <Loader2 size={16} className="spin" /> : 'Upload'}
           </button>
         </form>
+        
+        {uploading && (
+          <div style={{ marginTop: '16px' }}>
+            <div style={{ background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden', height: '6px' }}>
+              <div style={{ 
+                width: `${uploadProgress}%`, 
+                background: '#10b981', 
+                height: '100%', 
+                transition: 'width 0.2s ease-out' 
+              }} />
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px', textAlign: 'right' }}>
+              {uploadProgress}% Uploaded
+            </p>
+          </div>
+        )}
+
         {uploadMessage && (
           <p style={{ 
             marginTop: '12px', 

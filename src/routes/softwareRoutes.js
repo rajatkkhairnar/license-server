@@ -17,7 +17,6 @@
  */
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 
@@ -29,6 +28,7 @@ const {
   DeleteObjectCommand,
   HeadObjectCommand,
 } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 const adminAuth = require('../middleware/adminAuth');
 const { adminLimiter } = require('../middleware/rateLimiter');
@@ -60,11 +60,7 @@ if (R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY) {
   console.warn('⚠️  R2 credentials not set — software upload/download will be disabled.');
 }
 
-// ─── Multer (in-memory buffer, no local disk needed) ────────────────
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_FILE_SIZE },
-});
+// Multer is no longer used since uploads go directly to R2 via Presigned URLs
 
 // ─── Download Rate Limiter (30 req/hr per IP) ───────────────────────
 const downloadLimiter = rateLimit({
@@ -197,24 +193,21 @@ router.get('/versions', adminAuth, adminLimiter, async (req, res) => {
 });
 
 /**
- * POST /api/admin/software/upload
- * Upload a new version to R2.
- * Guardrails: max file size, total storage cap, auto-cleanup of old versions.
+ * POST /api/admin/software/presign
+ * Generates a presigned URL so the client can upload directly to R2 (bypassing Vercel's 4.5MB limit).
  */
-router.post('/upload', adminAuth, adminLimiter, upload.single('softwareFile'), async (req, res) => {
+router.post('/presign', adminAuth, adminLimiter, async (req, res) => {
   if (!s3Client) {
     return res.status(503).json({ error: 'R2 not configured. Set R2 env vars.' });
   }
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded.' });
+    const { fileName, fileSize } = req.body;
+
+    if (!fileName || !fileSize) {
+      return res.status(400).json({ error: 'fileName and fileSize are required.' });
     }
 
-    const fileBuffer = req.file.buffer;
-    const fileSize = fileBuffer.length;
-    const ext = path.extname(req.file.originalname) || '.exe';
-
-    // Guardrail: check file size (multer should catch this, but double-check)
+    // Guardrail: check file size
     if (fileSize > MAX_FILE_SIZE) {
       return res.status(400).json({
         error: `File too large. Maximum allowed: ${MAX_FILE_SIZE / (1024 * 1024)} MB.`,
@@ -233,19 +226,39 @@ router.post('/upload', adminAuth, adminLimiter, upload.single('softwareFile'), a
       });
     }
 
-    // Upload to R2
+    const ext = path.extname(fileName) || '.exe';
     const timestamp = Date.now();
     const key = `releases/microlab-pro-${timestamp}${ext}`;
 
-    await s3Client.send(new PutObjectCommand({
+    const command = new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: key,
-      Body: fileBuffer,
       ContentType: 'application/octet-stream',
-    }));
+    });
 
-    console.log(`Uploaded software: ${key} (${(fileSize / (1024 * 1024)).toFixed(1)} MB)`);
+    // URL valid for 15 minutes
+    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
 
+    return res.json({
+      success: true,
+      presignedUrl,
+      key,
+    });
+  } catch (err) {
+    console.error('Presign error:', err);
+    return res.status(500).json({ error: 'Failed to generate upload URL.' });
+  }
+});
+
+/**
+ * POST /api/admin/software/upload-complete
+ * Called by the client after a successful direct-to-R2 upload to trigger cleanup of old versions.
+ */
+router.post('/upload-complete', adminAuth, adminLimiter, async (req, res) => {
+  if (!s3Client) {
+    return res.status(503).json({ error: 'R2 not configured.' });
+  }
+  try {
     // Guardrail: auto-delete oldest versions beyond MAX_VERSIONS
     const updatedVersions = await listVersions();
     if (updatedVersions.length > MAX_VERSIONS) {
@@ -263,21 +276,10 @@ router.post('/upload', adminAuth, adminLimiter, upload.single('softwareFile'), a
       }
     }
 
-    return res.json({
-      success: true,
-      message: 'Software uploaded successfully.',
-      file: path.basename(key),
-      sizeMB: (fileSize / (1024 * 1024)).toFixed(2),
-    });
+    return res.json({ success: true, message: 'Upload finalized and old versions cleaned up.' });
   } catch (err) {
-    console.error('Upload error:', err);
-    // Handle multer file-size error
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({
-        error: `File too large. Maximum allowed: ${MAX_FILE_SIZE / (1024 * 1024)} MB.`,
-      });
-    }
-    return res.status(500).json({ error: 'Internal server error.' });
+    console.error('Upload complete error:', err);
+    return res.status(500).json({ error: 'Failed to finalize upload.' });
   }
 });
 
